@@ -4,9 +4,9 @@ final class MovieQuizViewController: UIViewController {
     @IBOutlet weak private var imageView: UIImageView!
     @IBOutlet weak private var textLabel: UILabel!
     @IBOutlet weak private var counterLabel: UILabel!
-    @IBOutlet weak private var yesButton: UIButton!
-    @IBOutlet weak private var noButton: UIButton!
-
+    @IBOutlet weak var noButton: UIButton!
+    @IBOutlet weak var yesButton: UIButton!
+    
     private struct QuizQuestion {
         let image: String
         let text: String
@@ -92,7 +92,10 @@ final class MovieQuizViewController: UIViewController {
     }
     private func showAnswerResult(isCorrect: Bool) {
         setupAnswerResult(isCorrect: isCorrect)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        self.imageView.layer.borderWidth = 0
         self.showNextQuestionOrResults()
+        }
     }
 
     private func showResults(quiz result: QuizResultsViewModel){
@@ -117,9 +120,6 @@ final class MovieQuizViewController: UIViewController {
                 buttonText: "Сыграть ещё раз")
             showResults(quiz: viewModel)
         } else {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            self.imageView.layer.borderWidth = 0
-            }
             currentQuestionIndex += 1
             let nextQuestion = questions[currentQuestionIndex]
             let viewModel = convert(model: nextQuestion)
@@ -148,11 +148,11 @@ final class MovieQuizViewController: UIViewController {
     }
     
     @IBAction private func yesButtonClicked(_ sender: UIButton) {
-        sender.isEnabled = false
+        changeStateButton(isEnabled: false)
         let currentQuestion = questions[currentQuestionIndex].correctAnswer
         showAnswerResult(isCorrect: currentQuestion)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                sender.isEnabled = true
+            self.changeStateButton(isEnabled: true)
             }
     }
 }
