@@ -1,79 +1,32 @@
 import UIKit
 
-final class MovieQuizViewController: UIViewController {
+final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     @IBOutlet weak private var imageView: UIImageView!
     @IBOutlet weak private var textLabel: UILabel!
     @IBOutlet weak private var counterLabel: UILabel!
     @IBOutlet weak var noButton: UIButton!
     @IBOutlet weak var yesButton: UIButton!
     
-    private struct QuizQuestion {
-        let image: String
-        let text: String
-        let correctAnswer: Bool
-    }
-    
-    private struct QuizStepViewModel {
-        let image: UIImage
-        let question: String
-        let questionNumber: String
-    }
-    
-    private struct QuizResultsViewModel {
-        let title: String
-        let text: String
-        let buttonText: String
-    }
-    
-    private let questions: [QuizQuestion] = [
-        QuizQuestion(
-            image: "The Godfather",
-            text: "Рейтинг этого фильма больше чем 6?",
-            correctAnswer: true),
-        QuizQuestion(
-            image: "The Dark Knight",
-            text: "Рейтинг этого фильма больше чем 6?",
-            correctAnswer: true),
-        QuizQuestion(
-            image: "Kill Bill",
-            text: "Рейтинг этого фильма больше чем 6?",
-            correctAnswer: true),
-        QuizQuestion(
-            image: "The Avengers",
-            text: "Рейтинг этого фильма больше чем 6?",
-            correctAnswer: true),
-        QuizQuestion(
-            image: "Deadpool",
-            text: "Рейтинг этого фильма больше чем 6?",
-            correctAnswer: true),
-        QuizQuestion(
-            image: "The Green Knight",
-            text: "Рейтинг этого фильма больше чем 6?",
-            correctAnswer: true),
-        QuizQuestion(
-            image: "Old",
-            text: "Рейтинг этого фильма больше чем 6?",
-            correctAnswer: false),
-        QuizQuestion(
-            image: "The Ice Age Adventures of Buck Wild",
-            text: "Рейтинг этого фильма больше чем 6?",
-            correctAnswer: false),
-        QuizQuestion(
-            image: "Tesla",
-            text: "Рейтинг этого фильма больше чем 6?",
-            correctAnswer: false),
-        QuizQuestion(
-            image: "Vivarium",
-            text: "Рейтинг этого фильма больше чем 6?",
-            correctAnswer: false)
-    ]
-    
+    private let questionsAmount: Int = 10
+    private var questionFactory: QuestionFactoryProtocol?
+    private var currentQuestion: QuizQuestion?
     private var currentQuestionIndex = 0
     private var correctAnswers = 0
     
+    func didReceiveNextQuestion(question: QuizQuestion?) {
+        guard let question = question else {
+            return
+        }
+        currentQuestion = question
+        let viewModel = convert(model: question)
+        DispatchQueue.main.async { [weak self] in
+            self?.show(quiz: viewModel)
+        }
+    }
+    
     private func convert(model: QuizQuestion) -> QuizStepViewModel {
         let image = UIImage(named: model.image) ?? UIImage()
-        return QuizStepViewModel(image: image, question: model.text, questionNumber: "\(currentQuestionIndex + 1)/\(questions.count) ")
+        return QuizStepViewModel(image: image, question: model.text, questionNumber: "\(currentQuestionIndex + 1)/\(questionsAmount) ")
     }
     
     private func show(quiz step: QuizStepViewModel) {
@@ -100,11 +53,10 @@ final class MovieQuizViewController: UIViewController {
 
     private func showResults(quiz result: QuizResultsViewModel){
         let alert = UIAlertController(title: result.title, message: result.text, preferredStyle: .alert)
-        let action = UIAlertAction(title: result.buttonText, style: .default) { _ in
+        let action = UIAlertAction(title: result.buttonText, style: .default) { [weak self] _ in
+            guard let self = self else {return}
             self.currentQuestionIndex = 0
-            let restart = self.questions[0]
-            let viewModel = self.convert(model: restart)
-            self.show(quiz: viewModel)
+            questionFactory?.requestNextQuestion()
             self.correctAnswers = 0
         }
         alert.addAction(action)
@@ -112,8 +64,8 @@ final class MovieQuizViewController: UIViewController {
     }
     
     private func showNextQuestionOrResults() {
-        if currentQuestionIndex == questions.count - 1 {
-            let text = "Ваш результат: \(correctAnswers)/10" // 1
+        if currentQuestionIndex == questionsAmount - 1 {
+            let text = "Ваш результат: \(correctAnswers)/\(questionsAmount)" // 1
             let viewModel = QuizResultsViewModel( // 2
                 title: "Этот раунд окончен!",
                 text: text,
@@ -121,9 +73,7 @@ final class MovieQuizViewController: UIViewController {
             showResults(quiz: viewModel)
         } else {
             currentQuestionIndex += 1
-            let nextQuestion = questions[currentQuestionIndex]
-            let viewModel = convert(model: nextQuestion)
-            show(quiz: viewModel)
+            questionFactory?.requestNextQuestion()
         }
     }
     private func changeStateButton(isEnabled: Bool){
@@ -133,25 +83,32 @@ final class MovieQuizViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        let currentQuestion = questions[currentQuestionIndex]
-        let currentQuestionModel = convert(model: currentQuestion)
-        show(quiz: currentQuestionModel)
+        let questionFactory = QuestionFactory() // 2
+        questionFactory.delegate = self         // 3
+        self.questionFactory = questionFactory  // 4
+        questionFactory.requestNextQuestion()
     }
     
     @IBAction private func noButtonClicked(_ sender: UIButton) {
         changeStateButton(isEnabled: false)
-        let currentQuestion = questions[currentQuestionIndex].correctAnswer
-        showAnswerResult(isCorrect: !currentQuestion)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        guard let currentQuestion = currentQuestion else {
+            return
+        }
+        showAnswerResult(isCorrect: !currentQuestion.correctAnswer)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self = self else{return}
             self.changeStateButton(isEnabled: true)
         }
     }
     
     @IBAction private func yesButtonClicked(_ sender: UIButton) {
         changeStateButton(isEnabled: false)
-        let currentQuestion = questions[currentQuestionIndex].correctAnswer
-        showAnswerResult(isCorrect: currentQuestion)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        guard let currentQuestion = currentQuestion else {
+            return
+        }
+        showAnswerResult(isCorrect: currentQuestion.correctAnswer)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self = self else {return}
             self.changeStateButton(isEnabled: true)
             }
     }
