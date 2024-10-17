@@ -62,10 +62,11 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         alert.addAction(action)
         self.present(alert, animated: true, completion: nil)
     }
-    
     private func showNextQuestionOrResults() {
         if currentQuestionIndex == questionsAmount - 1 {
-            let text = "Ваш результат: \(correctAnswers)/\(questionsAmount)" // 1
+            let text = correctAnswers == questionsAmount ?
+                        "Поздравляем, вы ответили на 10 из 10!" :
+                        "Вы ответили на \(correctAnswers) из 10, попробуйте ещё раз!"
             let viewModel = QuizResultsViewModel( // 2
                 title: "Этот раунд окончен!",
                 text: text,
@@ -73,7 +74,9 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             showResults(quiz: viewModel)
         } else {
             currentQuestionIndex += 1
-            questionFactory?.requestNextQuestion()
+            guard let nextQuestion = questionFactory?.requestNextQuestion() else {return}
+            let viewModel = convert(model: nextQuestion)
+            show(quiz: viewModel)
         }
     }
     private func changeStateButton(isEnabled: Bool){
