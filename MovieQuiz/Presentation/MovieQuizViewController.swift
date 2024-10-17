@@ -51,34 +51,25 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         }
     }
 
-    private func showResults(quiz result: QuizResultsViewModel){
-        let alert = UIAlertController(title: result.title, message: result.text, preferredStyle: .alert)
-        let action = UIAlertAction(title: result.buttonText, style: .default) { [weak self] _ in
-            guard let self = self else {return}
-            self.currentQuestionIndex = 0
-            questionFactory?.requestNextQuestion()
-            self.correctAnswers = 0
-        }
-        alert.addAction(action)
-        self.present(alert, animated: true, completion: nil)
-    }
     private func showNextQuestionOrResults() {
         if currentQuestionIndex == questionsAmount - 1 {
             let text = correctAnswers == questionsAmount ?
-                        "Поздравляем, вы ответили на 10 из 10!" :
-                        "Вы ответили на \(correctAnswers) из 10, попробуйте ещё раз!"
-            let viewModel = QuizResultsViewModel( // 2
-                title: "Этот раунд окончен!",
-                text: text,
-                buttonText: "Сыграть ещё раз")
-            showResults(quiz: viewModel)
+                                    "Поздравляем, вы ответили на 10 из 10!" :
+                                    "Вы ответили на \(correctAnswers) из 10, попробуйте ещё раз!"
+            var alert = AlertModel(title: "Этот раунд окончен!", message: text, buttonText: "Сыграть ещё раз", completion: { [weak self] in
+                guard let self = self else {return}
+                self.currentQuestionIndex = 0
+                questionFactory?.requestNextQuestion()
+                self.correctAnswers = 0
+                })
+            var alertShow = AlertPresenter(viewController: self)
+            alertShow.showResults(quiz: alert)
         } else {
             currentQuestionIndex += 1
             guard let nextQuestion = questionFactory?.requestNextQuestion() else {return}
-            let viewModel = convert(model: nextQuestion)
-            show(quiz: viewModel)
         }
     }
+
     private func changeStateButton(isEnabled: Bool){
         yesButton.isEnabled = isEnabled
         noButton.isEnabled = isEnabled
