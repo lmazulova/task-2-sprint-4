@@ -12,6 +12,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private var currentQuestion: QuizQuestion?
     private var currentQuestionIndex = 0
     private var correctAnswers = 0
+    private var statisticService: StatisticServiceProtocol?
     
     func didReceiveNextQuestion(question: QuizQuestion?) {
         guard let question = question else {
@@ -21,6 +22,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         let viewModel = convert(model: question)
         DispatchQueue.main.async { [weak self] in
             self?.show(quiz: viewModel)
+            self?.imageView.layer.borderWidth = 0
         }
     }
     
@@ -45,31 +47,35 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
     private func showAnswerResult(isCorrect: Bool) {
         setupAnswerResult(isCorrect: isCorrect)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-        self.imageView.layer.borderWidth = 0
-        self.showNextQuestionOrResults()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.showNextQuestionOrResults()
         }
     }
-
+    
     private func showNextQuestionOrResults() {
         if currentQuestionIndex == questionsAmount - 1 {
-            let text = correctAnswers == questionsAmount ?
-                                    "Поздравляем, вы ответили на 10 из 10!" :
-                                    "Вы ответили на \(correctAnswers) из 10, попробуйте ещё раз!"
-            var alert = AlertModel(title: "Этот раунд окончен!", message: text, buttonText: "Сыграть ещё раз", completion: { [weak self] in
+            statisticService?.store(correct: correctAnswers, total: questionsAmount)
+            let text = """
+            Ваш результат: \(correctAnswers)/\(questionsAmount)
+            Количество сыгранных квизов: \(statisticService!.gamesCount)
+            Рекорд: \(statisticService!.bestGame.correct)/\(statisticService!.bestGame.total) \(statisticService!.bestGame.date.dateTimeString)
+            Средняя точность: \(String(format: "%.2f", statisticService!.totalAccuracy))%
+            
+            """
+            let alert = AlertModel(title: "Этот раунд окончен!", message: text, buttonText: "Сыграть ещё раз", completion: { [weak self] in
                 guard let self = self else {return}
                 self.currentQuestionIndex = 0
                 questionFactory?.requestNextQuestion()
                 self.correctAnswers = 0
-                })
-            var alertShow = AlertPresenter(viewController: self)
+            })
+            let alertShow = AlertPresenter(viewController: self)
             alertShow.showResults(quiz: alert)
         } else {
             currentQuestionIndex += 1
-            guard let nextQuestion = questionFactory?.requestNextQuestion() else {return}
+            guard (questionFactory?.requestNextQuestion()) != nil else {return}
         }
     }
-
+    
     private func changeStateButton(isEnabled: Bool){
         yesButton.isEnabled = isEnabled
         noButton.isEnabled = isEnabled
@@ -77,10 +83,12 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        let questionFactory = QuestionFactory() // 2
-        questionFactory.delegate = self         // 3
-        self.questionFactory = questionFactory  // 4
+        let questionFactory = QuestionFactory()
+        questionFactory.delegate = self
+        self.questionFactory = questionFactory
         questionFactory.requestNextQuestion()
+        let statisticService = StatisticService()
+        self.statisticService = statisticService
     }
     
     @IBAction private func noButtonClicked(_ sender: UIButton) {
@@ -104,6 +112,6 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             guard let self = self else {return}
             self.changeStateButton(isEnabled: true)
-            }
+        }
     }
 }
