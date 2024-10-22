@@ -7,7 +7,7 @@
 
 import UIKit
 
-class AlertPresenter {
+final class AlertPresenter {
     var alert: AlertModel?
     let viewController: MovieQuizViewController?
     
