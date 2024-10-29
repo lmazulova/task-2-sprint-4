@@ -11,13 +11,14 @@ final class AlertPresenter {
     var alert: AlertModel?
     let viewController: MovieQuizViewController?
     
-    func showResults(quiz result: AlertModel){
-        let alert = UIAlertController(title: result.title, message: result.message, preferredStyle: .alert)
-        let action = UIAlertAction(title: result.buttonText, style: .default) {_ in result.completion()}
+    func showResults(model: AlertModel){
+        let alert = UIAlertController(title: model.title, message: model.message, preferredStyle: .alert)
+        let action = UIAlertAction(title: model.buttonText, style: .default) {_ in model.completion()}
         alert.addAction(action)
         if let viewController = viewController {
             viewController.present(alert, animated: true, completion: nil)
         }
+    
     }
     init(alert: AlertModel? = nil, viewController: MovieQuizViewController?) {
         self.alert = alert

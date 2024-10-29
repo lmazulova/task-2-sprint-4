@@ -7,6 +7,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     @IBOutlet weak private var counterLabel: UILabel!
     @IBOutlet weak var noButton: UIButton!
     @IBOutlet weak var yesButton: UIButton!
+    @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
     
     // MARK: - Private Properties
     private let questionsAmount: Int = 10
@@ -19,21 +20,20 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     // MARK: - Overrides Methods
     override func viewDidLoad() {
         super.viewDidLoad()
-        let questionFactory = QuestionFactory()
-        questionFactory.delegate = self
-        self.questionFactory = questionFactory
-        questionFactory.requestNextQuestion()
+        showLoadingIndicator()
+        questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
         let statisticService = StatisticService()
         self.statisticService = statisticService
+        questionFactory?.loadData()
     }
     
     // MARK: - IB Actions
     @IBAction private func noButtonClicked(_ sender: UIButton) {
-        answerGived(answer: false)
+        answerGiven(answer: false)
     }
     
     @IBAction private func yesButtonClicked(_ sender: UIButton) {
-        answerGived(answer: true)
+        answerGiven(answer: true)
     }
     
     // MARK: - Public Methods
@@ -48,10 +48,17 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             self?.imageView.layer.borderWidth = 0
         }
     }
+    func didLoadDataFromServer() {
+        activityIndicator.isHidden = true
+        questionFactory?.requestNextQuestion()
+    }
+    func didFailToLoadData(with error: Error) {
+        showNetworkError(message: error.localizedDescription)
+    }
     
     // MARK: - Private Methods
     private func convert(model: QuizQuestion) -> QuizStepViewModel {
-        let image = UIImage(named: model.image) ?? UIImage()
+        let image = UIImage(data: model.image) ?? UIImage()
         return QuizStepViewModel(image: image, question: model.text, questionNumber: "\(currentQuestionIndex + 1)/\(questionsAmount) ")
     }
     
@@ -95,7 +102,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
                 self.correctAnswers = 0
             })
             let alertShow = AlertPresenter(viewController: self)
-            alertShow.showResults(quiz: alert)
+            alertShow.showResults(model: alert)
         } else {
             currentQuestionIndex += 1
             guard (questionFactory?.requestNextQuestion()) != nil else {return}
@@ -107,7 +114,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         noButton.isEnabled = isEnabled
     }
     
-    private func answerGived(answer: Bool) {
+    private func answerGiven(answer: Bool) {
         changeStateButton(isEnabled: false)
         guard let currentQuestion = currentQuestion else {
             return
@@ -117,6 +124,28 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             guard let self = self else{return}
             self.changeStateButton(isEnabled: true)
         }
-        }
+    }
     
+    private func showLoadingIndicator() {
+        activityIndicator.isHidden = false
+        activityIndicator.startAnimating() 
+    }
+    
+    private func hideLoadingIndicator() {
+        activityIndicator.isHidden = true
+    }
+
+    private func showNetworkError(message: String) {
+        hideLoadingIndicator()
+        let alert = AlertModel(title: "Ошибка!", message: message, buttonText: "Попробовать ещё раз", completion: { [weak self] in
+            guard let self = self else {return}
+            self.currentQuestionIndex = 0
+            questionFactory?.requestNextQuestion()
+            self.correctAnswers = 0
+            questionFactory?.loadData()
+            self.questionFactory?.requestNextQuestion()
+        })
+        let alertShow = AlertPresenter(viewController: self)
+        alertShow.showResults(model: alert)
+    }
 }
