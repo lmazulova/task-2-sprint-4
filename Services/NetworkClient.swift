@@ -8,11 +8,12 @@
 import Foundation
 
 struct NetworkClient {
-    
+    // MARK: - Private Properties
     private enum NetworkError: Error {
         case codeError
     }
     
+    // MARK: - Public Methods
     func fetch(url: URL, handler: @escaping (Result<Data, Error>) -> Void) {
         let request = URLRequest(url: url)
         

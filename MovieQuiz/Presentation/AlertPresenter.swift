@@ -8,9 +8,17 @@
 import UIKit
 
 final class AlertPresenter {
+    // MARK: - Public Properties
     var alert: AlertModel?
     let viewController: MovieQuizViewController?
     
+    // MARK: - Initializers
+    init(alert: AlertModel? = nil, viewController: MovieQuizViewController?) {
+        self.alert = alert
+        self.viewController = viewController
+    }
+    
+    // MARK: - Public Methods
     func showResults(model: AlertModel){
         let alert = UIAlertController(title: model.title, message: model.message, preferredStyle: .alert)
         let action = UIAlertAction(title: model.buttonText, style: .default) {_ in model.completion()}
@@ -18,10 +26,6 @@ final class AlertPresenter {
         if let viewController = viewController {
             viewController.present(alert, animated: true, completion: nil)
         }
-    
-    }
-    init(alert: AlertModel? = nil, viewController: MovieQuizViewController?) {
-        self.alert = alert
-        self.viewController = viewController
+        
     }
 }

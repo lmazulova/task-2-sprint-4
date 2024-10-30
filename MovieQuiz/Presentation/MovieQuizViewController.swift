@@ -134,7 +134,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private func hideLoadingIndicator() {
         activityIndicator.isHidden = true
     }
-
+    
     private func showNetworkError(message: String) {
         hideLoadingIndicator()
         let alert = AlertModel(title: "Ошибка!", message: message, buttonText: "Попробовать ещё раз", completion: { [weak self] in

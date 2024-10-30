@@ -8,14 +8,15 @@
 import UIKit
 
 final class StatisticService: StatisticServiceProtocol {
+    // MARK: - Private Properties
     private let storage: UserDefaults = .standard
-    
     private enum Keys: String {
         case correct
         case bestGame
         case gamesCount
     }
     
+    // MARK: - Computed Properties
     var gamesCount: Int {
         get {
             storage.integer(forKey: Keys.gamesCount.rawValue)
@@ -51,6 +52,7 @@ final class StatisticService: StatisticServiceProtocol {
         return gamesCount > 0 ? Double(correctAnswers)/Double(gamesCount)*10 : 0
     }
     
+    // MARK: - Public Methods
     func store(correct count: Int, total amount: Int) {
         gamesCount += 1
         correctAnswers += count
