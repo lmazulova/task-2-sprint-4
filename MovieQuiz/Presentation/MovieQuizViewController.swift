@@ -5,9 +5,9 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     @IBOutlet weak private var imageView: UIImageView!
     @IBOutlet weak private var textLabel: UILabel!
     @IBOutlet weak private var counterLabel: UILabel!
-    @IBOutlet weak var noButton: UIButton!
-    @IBOutlet weak var yesButton: UIButton!
-    @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
+    @IBOutlet weak private var noButton: UIButton!
+    @IBOutlet weak private var yesButton: UIButton!
+    @IBOutlet weak private var activityIndicator: UIActivityIndicatorView!
     
     // MARK: - Private Properties
     private let questionsAmount: Int = 10
@@ -95,7 +95,11 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             Средняя точность: \(String(format: "%.2f", statisticService!.totalAccuracy))%
             
             """
-            let alert = AlertModel(title: "Этот раунд окончен!", message: text, buttonText: "Сыграть ещё раз", completion: { [weak self] in
+            let alert = AlertModel(title: "Этот раунд окончен!",
+                                   message: text,
+                                   buttonText: "Сыграть ещё раз",
+                                   completion: {
+                [weak self] in
                 guard let self = self else {return}
                 self.currentQuestionIndex = 0
                 questionFactory?.requestNextQuestion()
@@ -128,7 +132,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     
     private func showLoadingIndicator() {
         activityIndicator.isHidden = false
-        activityIndicator.startAnimating() 
+        activityIndicator.startAnimating()
     }
     
     private func hideLoadingIndicator() {
