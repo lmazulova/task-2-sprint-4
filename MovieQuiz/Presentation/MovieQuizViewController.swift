@@ -21,12 +21,12 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
         showLoadingIndicator()
-        questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
+        let networkClient = NetworkClient()
+        questionFactory = QuestionFactory(moviesLoader: MoviesLoader(networkClient: networkClient), delegate: self)
         let statisticService = StatisticService()
         self.statisticService = statisticService
         questionFactory?.loadData()
     }
-    
     // MARK: - IB Actions
     @IBAction private func noButtonClicked(_ sender: UIButton) {
         answerGiven(answer: false)
