@@ -1,12 +1,15 @@
 import UIKit
 
 final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
+    // MARK: - IB Outlets
     @IBOutlet weak private var imageView: UIImageView!
     @IBOutlet weak private var textLabel: UILabel!
     @IBOutlet weak private var counterLabel: UILabel!
     @IBOutlet weak var noButton: UIButton!
     @IBOutlet weak var yesButton: UIButton!
+    @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
     
+    // MARK: - Private Properties
     private let questionsAmount: Int = 10
     private var questionFactory: QuestionFactoryProtocol?
     private var currentQuestion: QuizQuestion?
@@ -14,6 +17,26 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private var correctAnswers = 0
     private var statisticService: StatisticServiceProtocol?
     
+    // MARK: - Overrides Methods
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        showLoadingIndicator()
+        questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
+        let statisticService = StatisticService()
+        self.statisticService = statisticService
+        questionFactory?.loadData()
+    }
+    
+    // MARK: - IB Actions
+    @IBAction private func noButtonClicked(_ sender: UIButton) {
+        answerGiven(answer: false)
+    }
+    
+    @IBAction private func yesButtonClicked(_ sender: UIButton) {
+        answerGiven(answer: true)
+    }
+    
+    // MARK: - Public Methods
     func didReceiveNextQuestion(question: QuizQuestion?) {
         guard let question = question else {
             return
@@ -25,9 +48,17 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             self?.imageView.layer.borderWidth = 0
         }
     }
+    func didLoadDataFromServer() {
+        activityIndicator.isHidden = true
+        questionFactory?.requestNextQuestion()
+    }
+    func didFailToLoadData(with error: Error) {
+        showNetworkError(message: error.localizedDescription)
+    }
     
+    // MARK: - Private Methods
     private func convert(model: QuizQuestion) -> QuizStepViewModel {
-        let image = UIImage(named: model.image) ?? UIImage()
+        let image = UIImage(data: model.image) ?? UIImage()
         return QuizStepViewModel(image: image, question: model.text, questionNumber: "\(currentQuestionIndex + 1)/\(questionsAmount) ")
     }
     
@@ -36,6 +67,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         counterLabel.text = step.questionNumber
         imageView.image = step.image
     }
+    
     private func setupAnswerResult(isCorrect: Bool) {
         imageView.layer.masksToBounds = true
         imageView.layer.borderWidth = 8
@@ -45,10 +77,11 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             correctAnswers += 1
         }
     }
+    
     private func showAnswerResult(isCorrect: Bool) {
         setupAnswerResult(isCorrect: isCorrect)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            self?.showNextQuestionOrResults()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            self.showNextQuestionOrResults()
         }
     }
     
@@ -69,7 +102,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
                 self.correctAnswers = 0
             })
             let alertShow = AlertPresenter(viewController: self)
-            alertShow.showResults(quiz: alert)
+            alertShow.showResults(model: alert)
         } else {
             currentQuestionIndex += 1
             guard (questionFactory?.requestNextQuestion()) != nil else {return}
@@ -81,37 +114,38 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         noButton.isEnabled = isEnabled
     }
     
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        let questionFactory = QuestionFactory()
-        questionFactory.delegate = self
-        self.questionFactory = questionFactory
-        questionFactory.requestNextQuestion()
-        let statisticService = StatisticService()
-        self.statisticService = statisticService
-    }
-    
-    @IBAction private func noButtonClicked(_ sender: UIButton) {
+    private func answerGiven(answer: Bool) {
         changeStateButton(isEnabled: false)
         guard let currentQuestion = currentQuestion else {
             return
         }
-        showAnswerResult(isCorrect: !currentQuestion.correctAnswer)
+        showAnswerResult(isCorrect: currentQuestion.correctAnswer == answer)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             guard let self = self else{return}
             self.changeStateButton(isEnabled: true)
         }
     }
     
-    @IBAction private func yesButtonClicked(_ sender: UIButton) {
-        changeStateButton(isEnabled: false)
-        guard let currentQuestion = currentQuestion else {
-            return
-        }
-        showAnswerResult(isCorrect: currentQuestion.correctAnswer)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+    private func showLoadingIndicator() {
+        activityIndicator.isHidden = false
+        activityIndicator.startAnimating() 
+    }
+    
+    private func hideLoadingIndicator() {
+        activityIndicator.isHidden = true
+    }
+    
+    private func showNetworkError(message: String) {
+        hideLoadingIndicator()
+        let alert = AlertModel(title: "Ошибка!", message: message, buttonText: "Попробовать ещё раз", completion: { [weak self] in
             guard let self = self else {return}
-            self.changeStateButton(isEnabled: true)
-        }
+            self.currentQuestionIndex = 0
+            questionFactory?.requestNextQuestion()
+            self.correctAnswers = 0
+            questionFactory?.loadData()
+            self.questionFactory?.requestNextQuestion()
+        })
+        let alertShow = AlertPresenter(viewController: self)
+        alertShow.showResults(model: alert)
     }
 }
