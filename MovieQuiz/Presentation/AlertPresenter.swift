@@ -10,10 +10,10 @@ import UIKit
 final class AlertPresenter {
     // MARK: - Public Properties
     var alert: AlertModel?
-    let viewController: MovieQuizViewController?
+    let viewController: MovieQuizViewControllerProtocol?
     
     // MARK: - Initializers
-    init(alert: AlertModel? = nil, viewController: MovieQuizViewController?) {
+    init(alert: AlertModel? = nil, viewController: MovieQuizViewControllerProtocol?) {
         self.alert = alert
         self.viewController = viewController
     }
