@@ -29,7 +29,7 @@ final class MovieQuizViewController: UIViewController, MovieQuizViewControllerPr
     
     // MARK: - Public Methods
     func show(quiz step: QuizStepViewModel) {
-        imageView.layer.borderWidth = 8
+        imageView.layer.borderWidth = 0
         textLabel.text = step.question
         counterLabel.text = step.questionNumber
         imageView.image = step.image
